@@ -145,7 +145,7 @@ async def process_add_coins(callback_query: CallbackQuery):
         # Update the message with new balance
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="➕ Add 10 coins", callback_data="add_coins_10")],
-            [InlineKeyboardButton(text="🕐 Subscribe 1 minute (10 coins)", callback_data="subscribe_1min")]
+            [InlineKeyboardButton(text="🕐 Subscribe", callback_data="subscribe")]
         ])
 
         await callback_query.message.edit_text(
@@ -159,6 +159,33 @@ async def process_add_coins(callback_query: CallbackQuery):
     except Exception as e:
         logger.error(f"Error in process_add_coins: {str(e)}", exc_info=True)
         await callback_query.answer("An error occurred while adding coins. Please try again later.")
+
+@dp.callback_query(lambda c: c.data == "subscribe")
+async def process_subscribe(callback_query: CallbackQuery):
+    logger.info(f"Received subscribe callback from user {callback_query.from_user.id}")
+    try:
+        await api_client.get_token(str(callback_query.from_user.id))
+        result = await api_client.create_subscription()
+        
+        # Update the message with subscription result
+        await callback_query.message.edit_text(
+            f"✅ Subscription created successfully!\n\n"
+            f"💰 Coins spent: {result['coins_spent']}\n"
+            f"💳 Remaining coins: {result['remaining_coins']}\n\n"
+            f"🔄 You can now use the LLM service. Send any message to interact with it."
+        )
+        
+        await callback_query.answer("Subscription created successfully!")
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 400:
+            error_data = e.response.json()
+            await callback_query.answer(error_data["detail"])
+        else:
+            logger.error(f"Error in process_subscribe: {str(e)}", exc_info=True)
+            await callback_query.answer("An error occurred while processing your subscription. Please try again later.")
+    except Exception as e:
+        logger.error(f"Error in process_subscribe: {str(e)}", exc_info=True)
+        await callback_query.answer("An error occurred while processing your subscription. Please try again later.")
 
 @dp.message()
 async def handle_message(message: Message):
