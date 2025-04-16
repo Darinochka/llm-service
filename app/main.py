@@ -69,8 +69,8 @@ async def create_message(
     db.commit()
     db.refresh(db_message)
 
-    # Process message asynchronously
-    process_llm_request.delay(db_message.id)
+    # Process message synchronously
+    process_llm_request(db_message.id)
 
     return message.MessageResponse(response="Processing your request...")
 

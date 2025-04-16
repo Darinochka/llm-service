@@ -8,57 +8,23 @@ services:
     volumes:
       - .:/app
       - ./logs:/tmp/logs
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/llm_service
-      - REDIS_URL=redis://redis:6379/0
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
-      - VLLM_API_URL=${VLLM_API_URL}
       - LOGS_DIR=/tmp/logs
     depends_on:
       - db
-      - redis
-
-  worker:
-    build: .
-    command: celery -A app.worker worker --loglevel=info
-    volumes:
-      - .:/app
-      - ./logs:/tmp/logs
-    environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/llm_service
-      - REDIS_URL=redis://redis:6379/0
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - VLLM_API_URL=${VLLM_API_URL}
-      - LOGS_DIR=/tmp/logs
-    depends_on:
-      - db
-      - redis
-
-  flower:
-    build: .
-    command: celery -A app.worker flower --port=5555
-    ports:
-      - "5555:5555"
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-      - LOGS_DIR=/tmp/logs
-    depends_on:
-      - redis
+    networks:
+      - llm_network
 
   db:
     image: postgres:15
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=llm_service
+    env_file:
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7
-    ports:
-      - "6379:6379"
+    networks:
+      - llm_network
 
   bot:
     build: .
@@ -66,15 +32,37 @@ services:
     volumes:
       - .:/app
       - ./logs:/tmp/logs
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/llm_service
-      - REDIS_URL=redis://redis:6379/0
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - VLLM_API_URL=${VLLM_API_URL}
       - LOGS_DIR=/tmp/logs
     depends_on:
       - db
-      - redis
+    networks:
+      - llm_network
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    ports:
+      - "8001:8001"
+    ipc: host
+    command: --model Qwen/Qwen2.5-0.5B-Instruct --port 8001
+    networks:
+      - llm_network
+
+networks:
+  llm_network:
+    driver: bridge
 
 volumes:
   postgres_data: 

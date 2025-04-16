@@ -5,6 +5,7 @@ from aiogram.types import Message
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import asyncio
+import time
 
 from app.core.config import settings
 from app.db.session import SessionLocal
@@ -163,20 +164,29 @@ async def handle_message(message: Message):
         processing_msg = await message.answer("Processing your request...")
         logger.info(f"Sent processing message for message_id: {db_message.id}")
 
-        # Process message asynchronously
-        logger.info(f"Triggering async processing for message_id: {db_message.id}")
-        process_llm_request.delay(db_message.id)
-
-        # Wait for response (in a real implementation, you'd want to use a proper async queue)
-        logger.info(f"Waiting for response for message_id: {db_message.id}")
+        # Process message synchronously
+        logger.info(f"Processing message_id: {db_message.id}")
+        process_llm_request(db_message.id)
+        
+        # Wait for response with timeout
+        max_wait_time = 60  # seconds
+        start_time = time.time()
+        
         while db_message.response == "Processing...":
+            if time.time() - start_time > max_wait_time:
+                logger.warning(f"Timeout waiting for response for message_id: {db_message.id}")
+                await processing_msg.edit_text("The request is taking longer than expected. We'll notify you when it's ready.")
+                break
+                
             await asyncio.sleep(1)
             db.refresh(db_message)
 
-        # Update the processing message with the actual response
-        logger.info(f"Updating message with response for message_id: {db_message.id}")
-        await processing_msg.edit_text(db_message.response)
-        logger.info(f"Successfully processed message_id: {db_message.id}")
+        # Update the processing message with the actual response if we have one
+        if db_message.response != "Processing...":
+            logger.info(f"Updating message with response for message_id: {db_message.id}")
+            await processing_msg.edit_text(db_message.response)
+            logger.info(f"Successfully processed message_id: {db_message.id}")
+            
     except Exception as e:
         logger.error(f"Error in handle_message: {str(e)}", exc_info=True)
         await message.answer("An error occurred while processing your message. Please try again later.")
