@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import List
+from pydantic import BaseModel
 
 from app.db.session import get_db
 from app.models import models
@@ -15,12 +16,34 @@ app = FastAPI(title="LLM Service API")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+class TokenRequest(BaseModel):
+    telegram_id: str
+
 def create_access_token(data: dict):
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
+
+@app.post("/token")
+async def get_token(token_request: TokenRequest, db: Session = Depends(get_db)):
+    # Check if user exists
+    user = db.query(models.User).filter(models.User.telegram_id == token_request.telegram_id).first()
+    
+    if not user:
+        # Create new user
+        user = models.User(
+            telegram_id=token_request.telegram_id,
+            role=models.UserRole.USER
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # Create access token
+    access_token = create_access_token({"sub": token_request.telegram_id})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
@@ -102,7 +125,7 @@ async def create_subscription(
         )
 
     # Calculate subscription cost (10 coins per minute)
-    subscription_duration_minutes = settings.SUBSCRIPTION_DURATION_DAYS * 24 * 60
+    subscription_duration_minutes = settings.SUBSCRIPTION_DURATION_MIN
     subscription_cost = subscription_duration_minutes * 10
 
     # Check if user has enough coins
@@ -114,7 +137,7 @@ async def create_subscription(
 
     # Create subscription
     start_date = datetime.utcnow()
-    end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_DAYS)
+    end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_MIN)
     
     subscription = models.Subscription(
         user_id=current_user.id,
@@ -182,7 +205,7 @@ async def admin_subscribe_user(
         )
 
     start_date = datetime.utcnow()
-    end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_DAYS)
+    end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_MIN)
     
     subscription = models.Subscription(
         user_id=user_id,

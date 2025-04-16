@@ -25,7 +25,8 @@ class Settings(BaseSettings):
 
     # Subscription
     SUBSCRIPTION_PRICE_RUB: float = 5.0
-    SUBSCRIPTION_DURATION_DAYS: int = 30
+    SUBSCRIPTION_DURATION_MIN: int = 1
+    API_URL: str
 
     class Config:
         env_file = ".env"
