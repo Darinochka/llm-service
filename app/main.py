@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import List
 from pydantic import BaseModel
 
@@ -21,7 +21,7 @@ class TokenRequest(BaseModel):
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
@@ -73,7 +73,7 @@ async def create_message(
     # Check subscription
     active_subscription = db.query(models.Subscription).filter(
         models.Subscription.user_id == current_user.id,
-        models.Subscription.end_date > datetime.utcnow()
+        models.Subscription.end_date > datetime.now(UTC)
     ).first()
     
     if not active_subscription:
@@ -88,14 +88,15 @@ async def create_message(
         content=message_in.content,
         response="Processing..."
     )
+
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
 
-    # Process message synchronously
     process_llm_request(db_message.id)
+    db.refresh(db_message)
 
-    return message.MessageResponse(response="Processing your request...")
+    return message.MessageResponse(response=db_message.response)
 
 @app.get("/history", response_model=List[message.Message])
 async def get_message_history(
@@ -115,7 +116,7 @@ async def create_subscription(
     # Check if user already has an active subscription
     active_subscription = db.query(models.Subscription).filter(
         models.Subscription.user_id == current_user.id,
-        models.Subscription.end_date > datetime.utcnow()
+        models.Subscription.end_date > datetime.now(UTC)
     ).first()
     
     if active_subscription:
@@ -126,7 +127,7 @@ async def create_subscription(
 
     # Calculate subscription cost (10 coins per minute)
     subscription_duration_minutes = settings.SUBSCRIPTION_DURATION_MIN
-    subscription_cost = subscription_duration_minutes * 10
+    subscription_cost = subscription_duration_minutes * settings.SUBSCRIPTION_PRICE_RUB
 
     # Check if user has enough coins
     if current_user.wallet < subscription_cost:
@@ -136,7 +137,7 @@ async def create_subscription(
         )
 
     # Create subscription
-    start_date = datetime.utcnow()
+    start_date = datetime.now(UTC)
     end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_MIN)
     
     subscription = models.Subscription(
@@ -171,6 +172,26 @@ async def get_wallet_balance(current_user: models.User = Depends(get_current_use
 async def get_user_info(current_user: models.User = Depends(get_current_user)):
     return current_user
 
+@app.post("/add_coins")
+async def add_coins(
+    coins_request: user.AddCoinsRequest,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Add coins to user's wallet
+    current_user.wallet += coins_request.amount
+    
+    # Create transaction record
+    transaction = models.Transaction(
+        user_id=current_user.id,
+        amount=coins_request.amount,
+        type=models.TransactionType.ADD_COINS
+    )
+    db.add(transaction)
+    db.commit()
+    
+    return {"message": f"{coins_request.amount} coins added successfully", "new_balance": current_user.wallet}
+
 # Admin endpoints
 @app.get("/admin/users", response_model=List[user.User])
 async def list_users(
@@ -204,7 +225,7 @@ async def admin_subscribe_user(
             detail="User not found"
         )
 
-    start_date = datetime.utcnow()
+    start_date = datetime.now(UTC)
     end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_MIN)
     
     subscription = models.Subscription(

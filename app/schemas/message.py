@@ -5,7 +5,7 @@ class MessageBase(BaseModel):
     content: str
 
 class MessageCreate(MessageBase):
-    user_id: int
+    content: str
 
 class Message(MessageBase):
     id: int

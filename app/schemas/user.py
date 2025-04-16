@@ -27,4 +27,7 @@ class Token(BaseModel):
     token_type: str
 
 class TokenData(BaseModel):
-    telegram_id: Optional[str] = None 
+    telegram_id: Optional[str] = None
+
+class AddCoinsRequest(BaseModel):
+    amount: int 

@@ -11,6 +11,7 @@ class UserRole(str, enum.Enum):
 class TransactionType(str, enum.Enum):
     SUBSCRIPTION = "subscription"
     REFUND = "refund"
+    ADD_COINS = "add_coins"
 
 class User(Base, TimestampMixin):
     __tablename__ = "users"

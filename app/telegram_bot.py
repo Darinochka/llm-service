@@ -59,6 +59,16 @@ class APIClient:
         response.raise_for_status()
         return response.json()
 
+    async def add_coins(self, amount: int) -> dict:
+        """Add coins to user's wallet"""
+        response = await self.client.post(
+            f"{self.base_url}/add_coins",
+            json={"amount": amount},
+            headers={"Authorization": f"Bearer {self._access_token}"}
+        )
+        response.raise_for_status()
+        return response.json()
+
     async def close(self):
         """Close the HTTP client"""
         await self.client.aclose()
@@ -139,8 +149,11 @@ async def cmd_wallet(message: Message):
 async def process_add_coins(callback_query: CallbackQuery):
     logger.info(f"Received add coins callback from user {callback_query.from_user.id}")
     try:
+        # Extract amount from callback data (e.g., "add_coins_10" -> 10)
+        amount = int(callback_query.data.split('_')[-1])
+        
         await api_client.get_token(str(callback_query.from_user.id))
-        wallet_info = await api_client.get_wallet()
+        result = await api_client.add_coins(amount)
 
         # Update the message with new balance
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -149,13 +162,13 @@ async def process_add_coins(callback_query: CallbackQuery):
         ])
 
         await callback_query.message.edit_text(
-            f"💰 Your Wallet Balance: {wallet_info['balance']} coins\n\n"
-            f"💡 Each minute of subscription costs {wallet_info['subscription_cost_per_minute']} coins\n"
+            f"💰 Your Wallet Balance: {result['new_balance']} coins\n\n"
+            f"💡 Each minute of subscription costs 10 coins\n"
             f"🔄 Use the button below to add more coins!",
             reply_markup=keyboard
         )
         
-        await callback_query.answer("✅ 10 coins added to your wallet!")
+        await callback_query.answer(f"✅ {amount} coins added to your wallet!")
     except Exception as e:
         logger.error(f"Error in process_add_coins: {str(e)}", exc_info=True)
         await callback_query.answer("An error occurred while adding coins. Please try again later.")
@@ -193,13 +206,11 @@ async def handle_message(message: Message):
     try:
         await api_client.get_token(str(message.from_user.id))
         
-        # Send processing message
         processing_msg = await message.answer("Processing your request...")
         
-        # Create message through API
         result = await api_client.create_message(message.text)
+        logger.info(f"Result: {result}")
         
-        # Update the processing message with the response
         await processing_msg.edit_text(result["response"])
         
     except httpx.HTTPStatusError as e:
