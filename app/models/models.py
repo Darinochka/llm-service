@@ -18,6 +18,7 @@ class User(Base, TimestampMixin):
     id = Column(Integer, primary_key=True, index=True)
     telegram_id = Column(String, unique=True, index=True, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    wallet = Column(Integer, default=20, nullable=False)  # Default 20 coins for each user
 
     subscriptions = relationship("Subscription", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")

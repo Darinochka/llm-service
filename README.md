@@ -1,11 +1,12 @@
 # LLM Service with Telegram Bot
 
-A B2C service that provides access to an LLM model through a Telegram bot, with subscription-based access control.
+A B2C service that provides access to an LLM model through a Telegram bot, with subscription-based access control and coin-based wallet system.
 
 ## Features
 
 - Telegram bot interface for user interaction
 - Subscription-based access control
+- Coin-based wallet system (10 coins per minute of subscription)
 - Background processing of LLM requests using Celery
 - PostgreSQL database with SQLAlchemy ORM
 - FastAPI backend with JWT authentication
@@ -81,9 +82,9 @@ docker-compose exec api alembic upgrade head
 
 ### Database Schema
 
-- **users**: User information and authentication
+- **users**: User information, authentication, and wallet balance
 - **subscriptions**: Active user subscriptions
-- **transactions**: Payment records
+- **transactions**: Payment and coin transaction records
 - **messages**: Chat history with LLM
 
 ## API Endpoints
@@ -92,8 +93,9 @@ docker-compose exec api alembic upgrade head
 
 - `POST /message`: Submit a message to the LLM
 - `GET /history`: Get message history
-- `POST /subscribe`: Create a subscription
+- `POST /subscribe`: Create a subscription (costs 10 coins per minute)
 - `GET /me`: Get user info
+- `GET /wallet`: Check wallet balance
 
 ### Admin Endpoints
 
@@ -102,8 +104,17 @@ docker-compose exec api alembic upgrade head
 
 ## Telegram Bot Commands
 
-- `/start`: Register/login
+- `/start`: Register/login (get 20 free coins)
 - `/subscribe`: Show subscription status and payment info
+- `/wallet`: Check your coin balance and add more coins
+
+## Wallet System
+
+- Each user starts with 20 free coins
+- Subscription costs 10 coins per minute
+- Users can add more coins through the Telegram bot
+- Coin balance is displayed in the wallet interface
+- Transaction history is maintained for all coin operations
 
 ## Development
 

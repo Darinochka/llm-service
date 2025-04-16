@@ -12,6 +12,7 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
+    wallet: int
     created_at: datetime
     updated_at: datetime
 

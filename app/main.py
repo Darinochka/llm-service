@@ -101,6 +101,17 @@ async def create_subscription(
             detail="Active subscription already exists"
         )
 
+    # Calculate subscription cost (10 coins per minute)
+    subscription_duration_minutes = settings.SUBSCRIPTION_DURATION_DAYS * 24 * 60
+    subscription_cost = subscription_duration_minutes * 10
+
+    # Check if user has enough coins
+    if current_user.wallet < subscription_cost:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Not enough coins. Required: {subscription_cost}, Available: {current_user.wallet}"
+        )
+
     # Create subscription
     start_date = datetime.utcnow()
     end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_DAYS)
@@ -112,16 +123,26 @@ async def create_subscription(
     )
     db.add(subscription)
 
+    # Deduct coins from wallet
+    current_user.wallet -= subscription_cost
+
     # Create transaction
     transaction = models.Transaction(
         user_id=current_user.id,
-        amount=settings.SUBSCRIPTION_PRICE_RUB,
+        amount=subscription_cost,
         type=models.TransactionType.SUBSCRIPTION
     )
     db.add(transaction)
     
     db.commit()
-    return {"message": "Subscription created successfully"}
+    return {"message": "Subscription created successfully", "coins_spent": subscription_cost, "remaining_coins": current_user.wallet}
+
+@app.get("/wallet", response_model=dict)
+async def get_wallet_balance(current_user: models.User = Depends(get_current_user)):
+    return {
+        "balance": current_user.wallet,
+        "subscription_cost_per_minute": 10
+    }
 
 @app.get("/me", response_model=user.User)
 async def get_user_info(current_user: models.User = Depends(get_current_user)):
