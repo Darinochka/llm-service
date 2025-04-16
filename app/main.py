@@ -138,7 +138,7 @@ async def create_subscription(
 
     # Create subscription
     start_date = datetime.now(UTC)
-    end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_MIN)
+    end_date = start_date + timedelta(minutes=settings.SUBSCRIPTION_DURATION_MIN)
     
     subscription = models.Subscription(
         user_id=current_user.id,
@@ -226,7 +226,7 @@ async def admin_subscribe_user(
         )
 
     start_date = datetime.now(UTC)
-    end_date = start_date + timedelta(days=settings.SUBSCRIPTION_DURATION_MIN)
+    end_date = start_date + timedelta(minutes=settings.SUBSCRIPTION_DURATION_MIN)
     
     subscription = models.Subscription(
         user_id=user_id,
