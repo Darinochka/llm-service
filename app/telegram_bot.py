@@ -84,7 +84,10 @@ async def cmd_start(message: Message):
         # Get token for the user
         await api_client.get_token(str(message.from_user.id))
         await message.answer(
-            "Welcome! You've been registered. Use /subscribe to get access to the LLM service."
+            "Welcome! You've been registered. Use /subscribe to get access to the LLM service.\n\n"
+            "💰 You can check your wallet balance with /wallet command.\n"
+            "💡 Each minute of subscription costs coins from your wallet.\n"
+            "🔄 You can add more coins to your wallet when needed."
         )
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 401:
@@ -144,6 +147,27 @@ async def cmd_wallet(message: Message):
     except Exception as e:
         logger.error(f"Error in cmd_wallet: {str(e)}", exc_info=True)
         await message.answer("An error occurred while checking your wallet. Please try again later.")
+
+@dp.message(Command("add_coins"))
+async def cmd_add_coins(message: Message):
+    logger.info(f"Received /add_coins command from user {message.from_user.id}")
+    try:
+        # Create inline keyboard with different coin amounts
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="➕ Add 10 coins", callback_data="add_coins_10")],
+            [InlineKeyboardButton(text="➕ Add 25 coins", callback_data="add_coins_25")],
+            [InlineKeyboardButton(text="➕ Add 50 coins", callback_data="add_coins_50")],
+            [InlineKeyboardButton(text="➕ Add 100 coins", callback_data="add_coins_100")]
+        ])
+
+        await message.answer(
+            "💰 Add coins to your wallet\n\n"
+            "Select the amount of coins you want to add:",
+            reply_markup=keyboard
+        )
+    except Exception as e:
+        logger.error(f"Error in cmd_add_coins: {str(e)}", exc_info=True)
+        await message.answer("An error occurred while processing your request. Please try again later.")
 
 @dp.callback_query(lambda c: c.data.startswith('add_coins_'))
 async def process_add_coins(callback_query: CallbackQuery):
