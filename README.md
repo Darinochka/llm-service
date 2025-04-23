@@ -45,7 +45,7 @@ docker-compose up --build
 
 5. Run database migrations:
 ```bash
-docker-compose exec api alembic upgrade head
+docker compose exec api python -m alembic upgrade head
 ```
 
 ### Database Schema
