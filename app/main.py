@@ -28,11 +28,9 @@ def create_access_token(data: dict):
 
 @app.post("/token")
 async def get_token(token_request: TokenRequest, db: Session = Depends(get_db)):
-    # Check if user exists
     user = db.query(models.User).filter(models.User.telegram_id == token_request.telegram_id).first()
     
     if not user:
-        # Create new user
         user = models.User(
             telegram_id=token_request.telegram_id,
             role=models.UserRole.USER
@@ -41,7 +39,6 @@ async def get_token(token_request: TokenRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
-    # Create access token
     access_token = create_access_token({"sub": token_request.telegram_id})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -70,7 +67,6 @@ async def create_message(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Check subscription
     active_subscription = db.query(models.Subscription).filter(
         models.Subscription.user_id == current_user.id,
         models.Subscription.end_date > datetime.now(UTC)
@@ -82,7 +78,6 @@ async def create_message(
             detail="Active subscription required"
         )
 
-    # Create message
     db_message = models.Message(
         user_id=current_user.id,
         content=message_in.content,
@@ -113,7 +108,6 @@ async def create_subscription(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Check if user already has an active subscription
     active_subscription = db.query(models.Subscription).filter(
         models.Subscription.user_id == current_user.id,
         models.Subscription.end_date > datetime.now(UTC)
@@ -125,18 +119,15 @@ async def create_subscription(
             detail="Active subscription already exists"
         )
 
-    # Calculate subscription cost (10 coins per minute)
     subscription_duration_minutes = settings.SUBSCRIPTION_DURATION_MIN
     subscription_cost = subscription_duration_minutes * settings.SUBSCRIPTION_PRICE_RUB
 
-    # Check if user has enough coins
     if current_user.wallet < subscription_cost:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Not enough coins. Required: {subscription_cost}, Available: {current_user.wallet}"
         )
 
-    # Create subscription
     start_date = datetime.now(UTC)
     end_date = start_date + timedelta(minutes=settings.SUBSCRIPTION_DURATION_MIN)
     
@@ -147,10 +138,8 @@ async def create_subscription(
     )
     db.add(subscription)
 
-    # Deduct coins from wallet
     current_user.wallet -= subscription_cost
 
-    # Create transaction
     transaction = models.Transaction(
         user_id=current_user.id,
         amount=subscription_cost,
@@ -178,10 +167,8 @@ async def add_coins(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    # Add coins to user's wallet
     current_user.wallet += coins_request.amount
     
-    # Create transaction record
     transaction = models.Transaction(
         user_id=current_user.id,
         amount=coins_request.amount,
@@ -192,7 +179,6 @@ async def add_coins(
     
     return {"message": f"{coins_request.amount} coins added successfully", "new_balance": current_user.wallet}
 
-# Admin endpoints
 @app.get("/admin/users", response_model=List[user.User])
 async def list_users(
     current_user: models.User = Depends(get_current_user),

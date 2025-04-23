@@ -11,7 +11,6 @@ from typing import Optional
 from app.core.config import settings
 from app.models import models
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 class APIClient:
@@ -81,7 +80,6 @@ api_client = APIClient(base_url=settings.API_URL)
 async def cmd_start(message: Message):
     logger.info(f"Received /start command from user {message.from_user.id}")
     try:
-        # Get token for the user
         await api_client.get_token(str(message.from_user.id))
         await message.answer(
             "Welcome! You've been registered. Use /subscribe to get access to the LLM service.\n\n"
@@ -129,7 +127,6 @@ async def cmd_wallet(message: Message):
         await api_client.get_token(str(message.from_user.id))
         wallet_info = await api_client.get_wallet()
         
-        # Create inline keyboard for adding coins
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="➕ Add 10 coins", callback_data="add_coins_10")],
             [InlineKeyboardButton(text="🕐 Subscribe", callback_data="subscribe")]
@@ -152,7 +149,6 @@ async def cmd_wallet(message: Message):
 async def cmd_add_coins(message: Message):
     logger.info(f"Received /add_coins command from user {message.from_user.id}")
     try:
-        # Create inline keyboard with different coin amounts
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="➕ Add 10 coins", callback_data="add_coins_10")],
             [InlineKeyboardButton(text="➕ Add 25 coins", callback_data="add_coins_25")],
@@ -173,13 +169,11 @@ async def cmd_add_coins(message: Message):
 async def process_add_coins(callback_query: CallbackQuery):
     logger.info(f"Received add coins callback from user {callback_query.from_user.id}")
     try:
-        # Extract amount from callback data (e.g., "add_coins_10" -> 10)
         amount = int(callback_query.data.split('_')[-1])
         
         await api_client.get_token(str(callback_query.from_user.id))
         result = await api_client.add_coins(amount)
 
-        # Update the message with new balance
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="➕ Add 10 coins", callback_data="add_coins_10")],
             [InlineKeyboardButton(text="🕐 Subscribe", callback_data="subscribe")]
@@ -204,7 +198,6 @@ async def process_subscribe(callback_query: CallbackQuery):
         await api_client.get_token(str(callback_query.from_user.id))
         result = await api_client.create_subscription()
         
-        # Update the message with subscription result
         await callback_query.message.edit_text(
             f"✅ Subscription created successfully!\n\n"
             f"💰 Coins spent: {result['coins_spent']}\n"

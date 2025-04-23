@@ -5,7 +5,6 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.models import Message
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 def process_llm_request(message_id: int) -> None:
@@ -27,19 +26,17 @@ def process_llm_request(message_id: int) -> None:
 
         logger.info(f"Retrieved message content: {message.content[:100]}...")
         
-        # Log the vLLM API URL for debugging
         vllm_api_url = os.environ.get('VLLM_API_URL', settings.VLLM_API_URL)
         logger.info(f"Using vLLM API URL: {vllm_api_url}")
         
         client = OpenAI(
             base_url=vllm_api_url,
-            api_key="not-needed",  # vLLM doesn't require API key
-            timeout=30.0  # Add timeout to prevent hanging
+            api_key="not-needed",
+            timeout=30.0
         )
         
         try:
             logger.info("Sending request to LLM API")
-            # Log the request details
             logger.info(f"Request details: model={settings.VLLM_MODEL_NAME}, content={message.content[:50]}...")
             
             response = client.chat.completions.create(

@@ -4,13 +4,10 @@ import logging.config
 import os
 from datetime import datetime
 
-# Define logs directory path - use /tmp for Docker compatibility
 LOGS_DIR = os.environ.get("LOGS_DIR", "logs")
 
-# Create logs directory if it doesn't exist
 os.makedirs(LOGS_DIR, exist_ok=True)
 
-# Define logging configuration
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -51,32 +48,32 @@ LOGGING_CONFIG = {
         },
     },
     "loggers": {
-        "": {  # Root logger
+        "": {
             "handlers": ["console", "file", "error_file"],
             "level": "INFO",
             "propagate": True,
         },
-        "app": {  # Application logger
+        "app": {
             "handlers": ["console", "file", "error_file"],
             "level": "INFO",
             "propagate": False,
         },
-        "celery": {  # Celery logger
+        "celery": {
             "handlers": ["console", "file", "error_file"],
             "level": "INFO",
             "propagate": False,
         },
-        "app.telegram_bot": {  # Telegram bot logger
+        "app.telegram_bot": {
             "handlers": ["console", "file", "error_file"],
             "level": "INFO",
             "propagate": False,
         },
-        "app.tasks": {  # Tasks logger
+        "app.tasks": {
             "handlers": ["console", "file", "error_file"],
             "level": "INFO",
             "propagate": False,
         },
-        "sqlalchemy.engine": {  # SQLAlchemy logger
+        "sqlalchemy.engine": {
             "handlers": ["console", "file"],
             "level": "WARNING",
             "propagate": False,
@@ -84,12 +81,10 @@ LOGGING_CONFIG = {
     },
 }
 
-# Initialize logging configuration
 try:
     logging.config.dictConfig(LOGGING_CONFIG)
 except Exception as e:
     print(f"Error configuring logging: {e}", file=sys.stderr)
-    # Fallback to basic console logging if configuration fails
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
