@@ -6,12 +6,10 @@ A B2C service that provides access to an LLM model through a Telegram bot, with 
 
 - Telegram bot interface for user interaction
 - Subscription-based access control
-- Coin-based wallet system (10 coins per minute of subscription)
+- Coin-based wallet system 
 - Background processing of LLM requests using Celery
 - PostgreSQL database with SQLAlchemy ORM
 - FastAPI backend with JWT authentication
-- Admin interface for user management
-- Docker and docker-compose setup
 
 ## Prerequisites
 
@@ -50,42 +48,13 @@ docker-compose up --build
 docker-compose exec api alembic upgrade head
 ```
 
-## Architecture
-
-### Components
-
-1. **API Service (FastAPI)**
-   - Handles HTTP requests
-   - Manages user authentication
-   - Processes subscriptions
-   - Provides admin interface
-
-2. **Telegram Bot**
-   - User registration and authentication
-   - Message handling
-   - Subscription management
-   - Direct interaction with LLM
-
-3. **Celery Worker**
-   - Background processing of LLM requests
-   - Async task queue management
-
-4. **Database (PostgreSQL)**
-   - User management
-   - Subscription tracking
-   - Message history
-   - Transaction records
-
-5. **Redis**
-   - Celery broker
-   - Task queue backend
-
 ### Database Schema
 
 - **users**: User information, authentication, and wallet balance
 - **subscriptions**: Active user subscriptions
 - **transactions**: Payment and coin transaction records
 - **messages**: Chat history with LLM
+- **wallet**: User wallet information and balance
 
 ## API Endpoints
 
@@ -133,21 +102,6 @@ uvicorn app.main:app --reload
 python app/run_bot.py
 ```
 
-4. Run Celery worker:
-```bash
-celery -A app.worker worker --loglevel=info
-```
-
-5. Run Celery Flower (monitoring):
-```bash
-celery -A app.worker flower
-```
-
 ## Monitoring
 
-- Celery Flower: http://localhost:5555
 - FastAPI docs: http://localhost:8000/docs
-
-## License
-
-MIT
