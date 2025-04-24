@@ -9,16 +9,13 @@ class MessageBroker:
         self.redis: Optional[Redis] = None
 
     async def connect(self):
-        """Установка соединения с Redis"""
         self.redis = await from_url(self.redis_url, encoding="utf-8", decode_responses=True)
 
     async def disconnect(self):
-        """Закрытие соединения с Redis"""
         if self.redis:
             await self.redis.close()
 
     async def publish(self, channel: str, message: Any):
-        """Публикация сообщения в канал"""
         if not self.redis:
             await self.connect()
         
@@ -30,7 +27,6 @@ class MessageBroker:
         await self.redis.publish(channel, message)
 
     async def subscribe(self, channel: str):
-        """Подписка на канал"""
         if not self.redis:
             await self.connect()
         
@@ -39,7 +35,6 @@ class MessageBroker:
         return pubsub
 
     async def get_message(self, pubsub) -> Optional[dict]:
-        """Получение сообщения из подписки"""
         message = await pubsub.get_message(ignore_subscribe_messages=True)
         if message and message["type"] == "message":
             try:
@@ -49,7 +44,6 @@ class MessageBroker:
         return None
 
     async def set(self, key: str, value: Any, expire: Optional[int] = None):
-        """Установка значения в Redis"""
         if not self.redis:
             await self.connect()
         
@@ -63,7 +57,6 @@ class MessageBroker:
             await self.redis.expire(key, expire)
 
     async def get(self, key: str) -> Optional[Any]:
-        """Получение значения из Redis"""
         if not self.redis:
             await self.connect()
         

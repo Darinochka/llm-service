@@ -9,18 +9,9 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
-# Создаем экземпляр брокера сообщений
 message_broker = MessageBroker(redis_url=settings.REDIS_URL)
 
 async def process_llm_request(message_id: int) -> None:
-    """Process an LLM request for a given message ID.
-    
-    Args:
-        message_id (int): The ID of the message to process
-        
-    Returns:
-        None
-    """
     logger.info(f"Starting to process LLM request for message_id: {message_id}")
     db = SessionLocal()
     try:
@@ -31,7 +22,6 @@ async def process_llm_request(message_id: int) -> None:
 
         logger.info(f"Retrieved message content: {message.content[:100]}...")
         
-        # Публикуем сообщение в канал для VLLM сервера
         await message_broker.publish(
             "vllm_requests",
             {
@@ -40,14 +30,11 @@ async def process_llm_request(message_id: int) -> None:
             }
         )
         
-        # Подписываемся на канал ответов
         pubsub = await message_broker.subscribe(f"vllm_response_{message_id}")
         
-        # Ждем ответа от VLLM сервера
         while True:
             response = await message_broker.get_message(pubsub)
             if response:
-                # Обновляем сообщение в базе данных
                 message.response = response["response"]
                 db.commit()
                 break
@@ -62,15 +49,6 @@ async def process_llm_request(message_id: int) -> None:
         db.close()
 
 async def process_vllm_response(message_id: int, content: str) -> None:
-    """Process response from VLLM server.
-    
-    Args:
-        message_id (int): The ID of the message
-        content (str): The message content
-        
-    Returns:
-        None
-    """
     try:
         vllm_api_url = os.environ.get('VLLM_API_URL', settings.VLLM_API_URL)
         logger.info(f"Using vLLM API URL: {vllm_api_url}")
@@ -88,7 +66,6 @@ async def process_vllm_response(message_id: int, content: str) -> None:
             ]
         )
         
-        # Публикуем ответ в канал для конкретного сообщения
         await message_broker.publish(
             f"vllm_response_{message_id}",
             {
