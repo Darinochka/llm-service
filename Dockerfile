@@ -19,5 +19,8 @@ COPY . .
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 
+# Set PYTHONPATH to include the app directory
+ENV PYTHONPATH=/app
+
 # Command will be overridden by docker-compose
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"] 

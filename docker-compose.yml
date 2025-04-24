@@ -14,6 +14,7 @@ services:
       - LOGS_DIR=/tmp/logs
     depends_on:
       - db
+      - redis
     networks:
       - llm_network
 
@@ -38,6 +39,7 @@ services:
       - LOGS_DIR=/tmp/logs
     depends_on:
       - db
+      - redis
     networks:
       - llm_network
 
@@ -60,9 +62,35 @@ services:
     networks:
       - llm_network
 
+  vllm_worker:
+    build: .
+    command: python app/vllm_worker.py
+    volumes:
+      - .:/app
+      - ./logs:/tmp/logs
+    env_file:
+      - .env
+    environment:
+      - LOGS_DIR=/tmp/logs
+    depends_on:
+      - redis
+      - vllm
+    networks:
+      - llm_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - llm_network
+
 networks:
   llm_network:
     driver: bridge
 
 volumes:
-  postgres_data: 
+  postgres_data:
+  redis_data: 

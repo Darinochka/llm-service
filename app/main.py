@@ -88,7 +88,7 @@ async def create_message(
     db.commit()
     db.refresh(db_message)
 
-    process_llm_request(db_message.id)
+    await process_llm_request(db_message.id)
     db.refresh(db_message)
 
     return message.MessageResponse(response=db_message.response)

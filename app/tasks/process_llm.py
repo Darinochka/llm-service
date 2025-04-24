@@ -4,10 +4,15 @@ from openai import OpenAI
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.models import Message
+from app.message_broker import MessageBroker
+import asyncio
 
 logger = logging.getLogger(__name__)
 
-def process_llm_request(message_id: int) -> None:
+# Создаем экземпляр брокера сообщений
+message_broker = MessageBroker(redis_url=settings.REDIS_URL)
+
+async def process_llm_request(message_id: int) -> None:
     """Process an LLM request for a given message ID.
     
     Args:
@@ -26,6 +31,47 @@ def process_llm_request(message_id: int) -> None:
 
         logger.info(f"Retrieved message content: {message.content[:100]}...")
         
+        # Публикуем сообщение в канал для VLLM сервера
+        await message_broker.publish(
+            "vllm_requests",
+            {
+                "message_id": message_id,
+                "content": message.content
+            }
+        )
+        
+        # Подписываемся на канал ответов
+        pubsub = await message_broker.subscribe(f"vllm_response_{message_id}")
+        
+        # Ждем ответа от VLLM сервера
+        while True:
+            response = await message_broker.get_message(pubsub)
+            if response:
+                # Обновляем сообщение в базе данных
+                message.response = response["response"]
+                db.commit()
+                break
+            await asyncio.sleep(0.1)
+            
+    except Exception as e:
+        logger.error(f"Error processing LLM request: {str(e)}", exc_info=True)
+        if message:
+            message.response = "Error processing request. Please try again later."
+            db.commit()
+    finally:
+        db.close()
+
+async def process_vllm_response(message_id: int, content: str) -> None:
+    """Process response from VLLM server.
+    
+    Args:
+        message_id (int): The ID of the message
+        content (str): The message content
+        
+    Returns:
+        None
+    """
+    try:
         vllm_api_url = os.environ.get('VLLM_API_URL', settings.VLLM_API_URL)
         logger.info(f"Using vLLM API URL: {vllm_api_url}")
         
@@ -35,35 +81,28 @@ def process_llm_request(message_id: int) -> None:
             timeout=30.0
         )
         
-        try:
-            logger.info("Sending request to LLM API")
-            logger.info(f"Request details: model={settings.VLLM_MODEL_NAME}, content={message.content[:50]}...")
-            
-            response = client.chat.completions.create(
-                model=settings.VLLM_MODEL_NAME,
-                messages=[{"role": "user", "content": message.content}],
-                temperature=0.7,
-                max_tokens=1000
-            )
-            
-            logger.info("Successfully received response from LLM API")
-            logger.info(f"Response content: {response.choices[0].message.content[:100]}...")
-            
-            message.response = response.choices[0].message.content
-            db.commit()
-            logger.info("Successfully updated message with LLM response")
-            
-        except Exception as e:
-            logger.error(f"Error during LLM API call: {str(e)}", exc_info=True)
-            message.response = f"Sorry, I encountered an error processing your request: {str(e)}"
-            db.commit()
-            
+        response = client.chat.completions.create(
+            model=settings.VLLM_MODEL_NAME,
+            messages=[
+                {"role": "user", "content": content}
+            ]
+        )
+        
+        # Публикуем ответ в канал для конкретного сообщения
+        await message_broker.publish(
+            f"vllm_response_{message_id}",
+            {
+                "message_id": message_id,
+                "response": response.choices[0].message.content
+            }
+        )
+        
     except Exception as e:
-        logger.error(f"Unexpected error in process_llm_request: {str(e)}", exc_info=True)
-        if db and message:
-            message.response = "Sorry, the service is temporarily unavailable. Please try again later."
-            db.commit()
-    finally:
-        if db:
-            db.close()
-        logger.info(f"Completed processing for message_id: {message_id}") 
+        logger.error(f"Error getting response from VLLM: {str(e)}", exc_info=True)
+        await message_broker.publish(
+            f"vllm_response_{message_id}",
+            {
+                "message_id": message_id,
+                "response": "Error getting response from LLM. Please try again later."
+            }
+        ) 
