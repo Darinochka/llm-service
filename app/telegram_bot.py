@@ -209,7 +209,8 @@ async def process_subscribe(callback_query: CallbackQuery):
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 400:
             error_data = e.response.json()
-            await callback_query.answer(error_data["detail"])
+            answer_data = error_data["detail"] + "\n\n" + "💰 You can add coins to your wallet using /add_coins command."
+            await callback_query.answer(answer_data)
         else:
             logger.error(f"Error in process_subscribe: {str(e)}", exc_info=True)
             await callback_query.answer("An error occurred while processing your subscription. Please try again later.")
