@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, UTC
 from typing import List
 from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.db.session import get_db
 from app.models import models
@@ -13,6 +14,8 @@ from app.tasks import process_llm_request
 from jose import JWTError, jwt
 
 app = FastAPI(title="LLM Service API")
+
+Instrumentator().instrument(app).expose(app)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
