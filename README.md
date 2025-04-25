@@ -2,6 +2,9 @@
 
 A B2C service that provides access to an LLM model through a Telegram bot, with subscription-based access control and coin-based wallet system.
 
+## Architecture
+![Architecture Diagram](image.png)
+
 ## Features
 
 - Telegram bot interface for user interaction
