@@ -18,7 +18,7 @@ A B2C service that provides access to an LLM model through a Telegram bot, with 
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone git@github.com:Darinochka/llm-service.git
 cd llm-service
 ```
 
