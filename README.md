@@ -58,18 +58,25 @@ docker compose exec api python -m alembic upgrade head
 
 ## API Endpoints
 
+### Authentication
+
+- `POST /token`: Get JWT token for authentication (requires telegram_id)
+
 ### Public Endpoints
 
-- `POST /message`: Submit a message to the LLM
+- `POST /message`: Submit a message to the LLM (requires active subscription)
 - `GET /history`: Get message history
-- `POST /subscribe`: Create a subscription (costs 10 coins per minute)
+- `POST /subscribe`: Create a subscription (costs coins per minute)
 - `GET /me`: Get user info
 - `GET /wallet`: Check wallet balance
+- `POST /add_coins`: Add coins to user's wallet
 
 ### Admin Endpoints
 
 - `GET /admin/users`: List all users
 - `POST /admin/subscribe/{user_id}`: Force subscribe a user
+
+All endpoints except `/token` require JWT authentication via Bearer token.
 
 ## Telegram Bot Commands
 
@@ -105,3 +112,5 @@ python app/run_bot.py
 ## Monitoring
 
 - FastAPI docs: http://localhost:8000/docs
+- Prometheus metrics: http://localhost:9090
+- Grafana dashboard: http://localhost:3000
