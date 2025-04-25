@@ -49,7 +49,6 @@ docker compose exec api python -m alembic upgrade head
 - **subscriptions**: Active user subscriptions
 - **transactions**: Payment and coin transaction records
 - **messages**: Chat history with LLM
-- **wallet**: User wallet information and balance
 
 ## API Endpoints
 
