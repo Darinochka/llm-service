@@ -9,14 +9,12 @@ from alembic import op
 import sqlalchemy as sa
 from app.models.models import UserRole, TransactionType
 
-# revision identifiers, used by Alembic.
 revision = 'initial_migration'
 down_revision = None
 branch_labels = None
 depends_on = None
 
 def upgrade() -> None:
-    # Create users table
     op.create_table(
         'users',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -30,7 +28,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
     op.create_index(op.f('ix_users_telegram_id'), 'users', ['telegram_id'], unique=True)
 
-    # Create subscriptions table
     op.create_table(
         'subscriptions',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -44,7 +41,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_subscriptions_id'), 'subscriptions', ['id'], unique=False)
 
-    # Create transactions table
     op.create_table(
         'transactions',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -58,7 +54,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_transactions_id'), 'transactions', ['id'], unique=False)
 
-    # Create messages table
     op.create_table(
         'messages',
         sa.Column('id', sa.Integer(), nullable=False),
