@@ -7,17 +7,9 @@ A B2C service that provides access to an LLM model through a Telegram bot, with 
 - Telegram bot interface for user interaction
 - Subscription-based access control
 - Coin-based wallet system 
-- Background processing of LLM requests using Celery
+- Background processing of LLM requests using Redis
 - PostgreSQL database with SQLAlchemy ORM
 - FastAPI backend with JWT authentication
-
-## Prerequisites
-
-- Docker and docker-compose
-- Python 3.11+
-- PostgreSQL
-- Redis
-- vLLM server running with OpenAI-compatible API
 
 ## Setup
 
